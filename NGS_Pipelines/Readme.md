@@ -1,0 +1,1 @@
+This repository includes all the projects I have done in the certificate program of specalization in Genomic Data Science by Johns Hopkins University through Coursera. 
