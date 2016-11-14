@@ -1,0 +1,232 @@
+---
+title: "Expressionset_Exploratory_Analysis"
+author: "Sharonhe"
+date: "November 4, 2016"
+output: html_document
+---
+
+This project includes some exploratory analysis in expressionsets. Contects include data transformation, three tables in genomic data science, clustering, etc. 
+
+# Dependencies
+
+```{r}
+library(gplots) 
+library(devtools) 
+library(Biobase) 
+library(RSkittleBrewer) 
+library(org.Hs.eg.db) 
+library(AnnotationDbi)
+library(dplyr)
+```
+
+## To install these packages:
+
+```{r}
+## install.packages(c("devtools","gplots", "dplyr"))
+library(devtools);
+library(gplots);
+library(dplyr);
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","org.Hs.eg.db","AnnotationDbi"))
+biocLite("alyssafrazee/RSkittleBrewer")
+```
+
+# Choose colors for the plots
+
+```{r}
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop) # set the color palette 
+par(pch=19) # set the character to be a filled dot
+```
+
+# Load the data (Expressionset)
+
+```{r}
+con = url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+load(file=con)
+close(con)
+bm = bodymap.eset
+pdata=pData(bm)
+edata=exprs(bm)
+fdata = fData(bm)
+ls()
+```
+
+# Check headers and factor/character variables in each table
+
+```{r}
+colnames(edata)
+colnames(pdata)
+colnames(fdata)
+head(edata) # check the first few rows
+# Tables are good for looking at factor or character variables, especially in phenotype data
+table(pdata$gender) 
+table(pdata$gender,pdata$race)
+```
+
+# Look for missing values
+
+```{r}
+# First check a summary of the distribution to look for scale, this is also one way to check for NA values.
+summary(edata)
+# Use option useNA to include NA's in table
+table(pdata$age,useNA="ifany")
+# is.na checks for NA values
+table(is.na(pdata$age))
+# Check for other common missing names
+sum(pdata$age==" ")
+# Check genomic data for NAs
+sum(is.na(edata))
+# Make the distribution of NA's by genes
+gene_na = rowSums(is.na(edata))
+table(gene_na)
+```
+
+# Make sure dimensions match up
+
+```{r}
+dim(fdata)
+dim(edata)
+dim(pdata)
+```
+
+# Look at overall distributions
+
+## Boxplot
+
+```{r}
+boxplot(log2(edata+1),col=2,range=0)
+# Result shows that there are a lot of outliers
+```
+
+```{r, echo=FALSE}
+boxplot(log2(edata+1),col=2,range=0)
+# Result shows that there are a lot of outliers
+```
+
+```{r}
+# remove rows that are mostly zero
+edata = as.data.frame(edata)
+filt_edata = filter(edata,rowMeans(edata) > 1) # dplyr :: filter function can only filter a data frame, can't be used on a matrix
+boxplot(as.matrix(log2(filt_edata+1)), col=2)
+```
+
+
+## Histogram
+
+```{r}
+par(mfrow=c(1,2)) # ggplots: This is the equivalent of making two distinct plots
+hist(log2(edata[,1]+1),col=2)
+hist(log2(edata[,2]+1),col=2)
+```
+
+## Density plots
+
+```{r}
+plot(density(log2(edata[,1]+1)),col=2)
+lines(density(log2(edata[,2]+1)),col=3) # add line to previous plot instead of overwriting the previous plot
+```
+
+## Q-Q plots
+
+```{r}
+qqplot(log2(edata[,1]+1), log2(edata[,2]+1),col=3) # each dot represents a percentile
+abline(c(0,1)) # add 45% line
+# Interpretation: eg. the second sample has a higher fifth percentile than the first sample so it has higher values for low values.
+```
+
+## M-A plot (Bland Altman plot)
+
+```{r}
+# The basic idea is to plot the sum of the two values on the x-axis and the difference on the y-axis. This can be used to see any difference between the (samples, averages, etc.) and to see if there is any intensity-specific biases.
+mm = log2(edata[,1]+1) - log2(edata[,2]+1) # y axis
+aa = log2(edata[,1]+1) + log2(edata[,2]+1) # x axis
+plot(aa,mm,col=2)
+```
+
+# Check for obvious data mixups
+
+check to make sure that the men and women are correctly labeled by looking at expression on the Y chromosome.
+
+```{r}
+# Get the chromosomes for each gene using the feature data.
+aeid = as.character(fdata[,1])
+chr = AnnotationDbi::select(org.Hs.eg.db,keys=aeid,keytype="ENSEMBL",columns="CHR")
+head(chr)
+
+dim(chr)
+dim(edata) 
+# These two dimentions are different, because some genes are annotated to multiple chromsomes
+
+# Take non-duplicated chromsomes
+chr = chr[!duplicated(chr[,1]),]
+
+# Confirm that the annotation still is in the right order
+all(chr[,1] == rownames(edata)) 
+
+# Select the chromosome Y samples
+edatay = dplyr::filter(edata,chr$CHR=="Y")
+
+# Males have Y chromsome expression as expected
+boxplot(colSums(edatay) ~ pdata$gender)
+points(colSums(edatay) ~ jitter(as.numeric(pdata$gender)),
+        col=as.numeric(pdata$gender),
+        pch=19)
+```
+
+# Heatmap and hierarchical clustering
+
+```{r}
+ematrix = as.matrix(edata)[rowMeans(edata) > 10000,] 
+heatmap(ematrix)
+```
+
+```{r}
+# change the color for the heatmap
+colramp = colorRampPalette(c(3,"white",2))(9)
+heatmap(ematrix,col=colramp)
+```
+
+```{r}
+# turn off the automatic clustering
+heatmap(ematrix,col=colramp,Rowv=NA,Colv=NA)
+```
+
+```{r}
+# add a color scale to the heatmap
+heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
+          dendrogram="none", scale="row",trace="none")
+```
+
+```{r}
+# make a heatmap of the 500 most highly expressed genes (as defined by total count)
+row_sums = rowSums(edata)
+index = which(rank(-row_sums) < 500 )
+heatmap(as.matrix(edata[index,]),Rowv=NA,Colv=NA)
+```
+
+```{r}
+#cuttree cluster the samples into two groups
+dist1 = dist(t(edata)) # compute the distances between the rows of a data matrix.
+hclust1 = hclust(dist1) # Hierarchical Clustering
+hc = cutree(hclust1, k = 1:2) # cluster the samples into two groups
+plot(hc)
+```
+
+# K-means Clustering
+
+```{r}
+edata = log2(edata+1) # log2 transform
+set.seed(1235) # for reproducible results
+kmeans_edata = kmeans(edata, centers = 2) # make two clusters
+matplot(t(kmeans_edata$centers), col = 1:2, type = "l", lwd = 2) # matplot: Plot Columns of Matrices. t() is for transpose a matrix
+```
+
+
+```{r}
+sessionInfo()
+devtools::session_info()
+```
+

@@ -1,0 +1,87 @@
+---
+title: "Many regressions"
+author: "Sharonhe"
+date: "November 8, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(limma)
+library(edge)
+```
+
+# Load the data
+
+Data from the paper [Detection of redundant fusion transcripts as biomarkers or disease-specific therapeutic targets in breast cancer.](http://www.ncbi.nlm.nih.gov/pubmed/22496456) that uses data from different normal human tissues
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+```
+
+## Transform and filter the data
+
+```{r}
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Fit many regression models at once. 
+
+```{r}
+mod = model.matrix(~ pdata$strain)
+fit = lm.fit(mod,t(edata))
+names(fit)
+
+# Compare to output of `lm`
+fit$coefficients[,1]
+tidy(lm(as.numeric(edata[1, ]) ~ pdata$strain))
+
+# Check the coefficients across genes
+par(mfrow=c(1,2))
+hist(fit$coefficients[1,],breaks=100,col=2,xlab="Intercept")
+hist(fit$coefficients[2,],breaks=100,col=2,xlab="Strain")
+abline(v=0,lwd=3,col=1)
+
+# Fit many regressions with an adjustment
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_adj = lm.fit(mod_adj,t(edata))
+fit_adj$coefficients[,1]
+```
+
+## Fit many regressions with the limma package
+
+```{r}
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_limma = lmFit(edata,mod_adj)
+names(fit_limma)
+fit_limma$coefficients[1,]
+fit_adj$coefficients[,1] # results are same as fit_limma$coefficients[1,]
+```
+
+## Fit many regressions with the edge package
+
+```{r}
+edge_study = build_study(data=edata,grp=pdata$strain,adj.var=as.factor(pdata$lane.number))
+fit_edge = fit_models(edge_study)
+summary(fit_edge)
+fit_edge@beta.coef[1,] 
+fit_limma$coefficients[1,] # results are same as fit_edge@beta.coef[1,] 
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.

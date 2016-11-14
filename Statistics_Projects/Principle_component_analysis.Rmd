@@ -1,0 +1,52 @@
+---
+title: "Principle component analysis"
+author: "Sharonhe"
+date: "November 9, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(sva)
+library(bladderbatch)
+library(snpStats)
+```
+
+## Load the data
+
+```{r}
+data(for.exercise)
+controls <- rownames(subject.support)[subject.support$cc==0]
+use <- seq(1, ncol(snps.10), 10)
+ctl.10 <- snps.10[controls,use]
+```
+
+## Calculate the principle components
+
+```{r}
+xxmat <- xxt(ctl.10, correct.for.missing=FALSE)
+evv <- eigen(xxmat, symmetric=TRUE)
+pcs <- evv$vectors[,1:5]
+```
+
+Compare the PCs to the population labels and see that PC1 captures the population variable very well
+
+```{r}
+pop <- subject.support[controls,"stratum"]
+plot(pcs[,1],pcs[,2],col=as.numeric(pop),
+      xlab="PC1",ylab="PC2")
+legend(0,0.15,legend=levels(pop),pch=19,col=1:2)
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.
+
+

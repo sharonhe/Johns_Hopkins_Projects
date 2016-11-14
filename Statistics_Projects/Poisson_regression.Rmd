@@ -1,0 +1,72 @@
+---
+title: "Generalized linear models: Poisson regression"
+author: "Sharonhe"
+date: "November 10, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(snpStats)
+library(broom)
+library(MASS)
+library(DESeq2)
+```
+
+## Load the data
+
+Data are from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+edata = edata[rowMeans(edata) > 10, ] # filter the data 
+```
+
+## A single Poisson regression
+
+The coefficient in this case is the increase in the log number of counts comparing one strain to the other. 
+
+```{r}
+glm3 = glm(edata[1, ] ~ pdata$strain,family="poisson")
+tidy(glm3)
+```
+
+
+## A single negative binomial regression: 
+
+Negative binomial regression is for modeling count variables, usually for over-dispersed count outcome variables.
+
+```{r}
+glm.nb1 = glm.nb(edata[1, ] ~ pdata$strain)
+tidy(glm.nb1)
+```
+
+## Many negative binomial regression at once:
+
+We can use the `DESeq2` package to perform many (moderated) negative binomial regressions at once.
+
+```{r}
+de = DESeqDataSetFromMatrix(edata, pdata, ~strain) # We first need to create a DESeq data set.
+glm_all_nb = DESeq(de)
+result_nb = results(glm_all_nb)
+hist(result_nb$stat)
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.
+

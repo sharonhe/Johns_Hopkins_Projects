@@ -1,0 +1,67 @@
+---
+title: "Permutation"
+author: "Sharonhe"
+date: "November 11, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(limma)
+library(edge)
+library(genefilter)
+```
+
+# Load the data
+
+Data are from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Calculate t- or F-statistics
+
+```{r}
+tstats_obj = rowttests(edata,pdata$strain)
+hist(tstats_obj$statistic,col=2,xlim=c(-5,2))
+```
+
+## Permute the sample labels
+
+We can now permute the sample labels using the `sample` function in R. 
+
+```{r}
+set.seed(135)
+strain = pdata$strain
+strain0 = sample(strain)
+tstats_obj0 = rowttests(edata,strain0)
+hist(tstats_obj0$statistic,col=2,xlim=c(-5,2))
+```
+
+## Compare the observed and permuted statistics
+
+```{r}
+quantile(tstats_obj0$statistic)
+quantile(tstats_obj$statistic)
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+      
+This document was processed on: `r Sys.Date()`.
+

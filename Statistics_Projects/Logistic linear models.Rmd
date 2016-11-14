@@ -1,0 +1,86 @@
+---
+title: "Generalized linear model: Logistic regression"
+author: "Sharonhe"
+date: "November 9, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(snpStats)
+library(broom)
+library(MASS)
+library(DESeq2)
+```
+
+## Load the data
+
+Sample SNP data are from a case-control genome-wide association study. 
+
+```{r}
+data(for.exercise)
+use <- seq(1, ncol(snps.10), 10)
+sub.10 <- snps.10[,use]
+```
+
+## Single logistic regression
+
+The coefficient is the change in log-odds for a one unit decrease (because homozygous major allele is coded 1) in the number of copies of the minor allele.
+
+```{r}
+snpdata = sub.10@.Data
+status = subject.support$cc
+snp1 = as.numeric(snpdata[,1]) # analyze the 1st snp
+table(snp1) # check for missing values: in results, 0 refers to missing value
+snp1[snp1==0] = NA
+glm1 = glm(status ~ snp1,family="binomial")
+tidy(glm1)
+```
+
+## If we need to code a dominant model
+
+Only an association of risk with the two copies of the common allele, now the coefficient on `snp1_dom` is the increase in log odds associated with two copies of the major allele. 
+
+```{r}
+snp1_dom = (snp1 == 1)
+glm1_dom = glm(status ~ snp1_dom,family="binomial")
+tidy(glm1_dom)
+tidy(glm1)
+```
+
+## Adjust logistic regression on principle components
+
+```{r}
+# Compute the pcs
+xxmat <- xxt(sub.10, correct.for.missing=FALSE)
+evv <- eigen(xxmat, symmetric=TRUE)
+pcs <- evv$vectors[,1:5]
+# adjust for pcs
+glm2 = glm(status ~ snp1 + pcs[,1:5],family="binomial")
+tidy(glm2)
+```
+
+## Fit many glms at once
+
+The `snps.rhs.tests` function computes an asymptotic chi-squared statistic.
+
+```{r}
+# fit many glms
+glm_all = snp.rhs.tests(status ~ 1,snp.data=sub.10) # ~1 refers to no adjustment for the model
+slotNames(glm_all)
+qq.chisq(chi.squared(glm_all),df=1)
+# adjust for pcs
+glm_all_adj = snp.rhs.tests(status ~ pcs,snp.data=sub.10)
+qq.chisq(chi.squared(glm_all_adj),df=1)
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.

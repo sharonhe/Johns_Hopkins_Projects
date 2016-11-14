@@ -1,0 +1,85 @@
+---
+title: "Linear Regression"
+author: "Sharonhe"
+date: "November 7, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(broom)
+```
+
+## Load the data
+
+```{r}
+rm(list = ls())
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+load(file=con)
+close(con)
+bm = bodymap.eset
+pdata=pData(bm)
+edata=as.data.frame(exprs(bm))
+fdata = fData(bm)
+ls()
+```
+
+## Fit a simple linear regression for the first gene with sample age
+
+```{r}
+# fit linear model
+edata = as.matrix(edata)
+lm1 = lm(edata[1,] ~ pdata$age)
+tidy(lm1)
+
+# plotting
+plot(pdata$age,edata[1,], col=1)
+abline(lm1$coeff[1],lm1$coeff[2], col=2,lwd=3)
+```
+
+## Considering categorical variables, eg. gender
+
+```{r}
+pdata$gender
+table(pdata$gender)
+boxplot(edata[1,] ~ pdata$gender)
+points(edata[1,] ~ jitter(as.numeric(pdata$gender)),
+       col=as.numeric(pdata$gender))
+
+lm2 = lm(edata[1,] ~ pdata$gender)
+tidy(lm2)
+```
+
+## Compute multiple coefficient for one variable
+
+```{r}
+table(pdata$tissue.type)
+tidy(lm(edata[1,] ~ pdata$tissue.type )) # the first tissue type (in this case is "adipose"") refers to the "(Intercept)" in the results showed
+```
+
+## Adjusting for variables 
+
+```{r}
+lm3 = lm(edata[1,] ~ pdata$age + pdata$gender)
+tidy(lm3)
+```
+
+```{r}
+##           term  estimate  std.error  statistic     p.value
+## 1   (Intercept) 2331.5814 438.181127  5.3210448 0.000138739
+## 2     pdata$age  -23.9133   6.488058 -3.6857414 0.002743642
+## 3 pdata$genderM -207.2565 236.430512 -0.8766066 0.396610372
+```
+
+
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.

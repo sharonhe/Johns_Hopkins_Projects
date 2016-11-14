@@ -1,0 +1,63 @@
+---
+title: "Quantile_normalization"
+author: "Sharonhe"
+date: "November 7, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(preprocessCore)
+```
+
+## set the pallete for the plots
+
+```{r}
+tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
+palette(tropical)
+```
+
+## Load the data
+
+```{r}
+rm(list=ls())
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/montpick_eset.RData")
+load(file=con)
+close(con)
+mp = montpick.eset
+pdata=pData(mp)
+edata=as.data.frame(exprs(mp))
+fdata = fData(mp)
+ls()
+```
+
+## Show distributions of several samples
+
+```{r}
+edata = log2(edata + 1)
+edata = edata[rowMeans(edata) > 3, ]
+colramp = colorRampPalette(c(3,"white",2))(20)
+plot(density(edata[,1]),col=colramp[1],lwd=3,ylim=c(0,.30))
+for(i in 2:20){lines(density(edata[,i]),lwd=3,col=colramp[i])} # so data needs normalization
+```
+
+## Quantile normalization
+
+Quantile normalization is to make the distributions the same across samples.
+
+```{r}
+norm_edata = normalize.quantiles(as.matrix(edata))
+plot(density(norm_edata[,1]),col=colramp[1],lwd=3,ylim=c(0,.20))
+for(i in 2:20){lines(density(norm_edata[,i]),lwd=3,col=colramp[i])}
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.

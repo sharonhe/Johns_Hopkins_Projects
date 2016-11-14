@@ -1,0 +1,146 @@
+---
+title: "Calculating statistics"
+author: "Sharonhe"
+date: "November 10, 2016"
+output: html_document
+---
+
+## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(limma)
+library(edge)
+library(genefilter)
+```
+
+## Load the data
+
+Data are from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+# Download the data
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+# Transform and filter the data
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Calculate t-statistic for two-group comparison
+
+The `genefilter` package lets you compute statistics rapidly for two-group comparisons. These are not moderated. 
+
+```{r}
+tstats_obj = rowttests(edata,pdata$strain)
+names(tstats_obj)
+hist(tstats_obj$statistic,col=2)
+```
+
+## Calculate F-statistic for multi-group comparison
+
+```{r}
+fstats_obj = rowFtests(edata,as.factor(pdata$lane.number))
+names(fstats_obj)
+hist(fstats_obj$statistic,col=2)
+```
+
+## Fit many statistics with limma
+
+This approach fits many moderated statistics simultaneously.
+
+A number of summary statistics are computed by the eBayes() function for 
+each gene and each contrast. The moderated t-statistics has the same interpretation as an ordinary t-statistic except that the standard errors have been moderated across genes, effectively borrowing information from the ensemble of genes to aid with 
+inference about each individual gene. 
+
+```{r}
+mod = model.matrix(~ pdata$strain)
+fit_limma = lmFit(edata,mod)
+ebayes_limma = eBayes(fit_limma)
+head(ebayes_limma$t)
+# compare moderated and ordinary t-statistics
+plot(ebayes_limma$t[,2],-tstats_obj$statistic,col=4,
+     xlab="Moderated T-stat",ylab="T-stat")
+abline(c(0,1),col="darkgrey",lwd=3)
+```
+
+## Fit many adjusted statistics with limma
+
+Here we adjust for the lane number, now the test-statistic for the strain is adjusted for the lane number (a surrogate for a batch effect).
+
+```{r}
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_limma_adj = lmFit(edata,mod_adj)
+ebayes_limma_adj = eBayes(fit_limma_adj)
+head(ebayes_limma_adj$t)
+```
+
+## Calculating a nested model comparison with limma
+
+Sometimes we want to compare the null model to the alternative model with some additional covariates. Here we have to know which coefficients we want to test in the alternative model. 
+
+Suppose we wanted to find lane effects then we can fit a limma model and find which coefficients belong to the lane variable.
+
+```{r}
+mod_lane = model.matrix(~ as.factor(pdata$lane.number))
+fit_limma_lane = lmFit(edata,mod_lane)
+ebayes_limma_lane = eBayes(fit_limma_lane) 
+head(ebayes_limma_lane$t)
+```
+
+Then we can get the F-statistics with `topTable`
+
+```{r}
+top_lane = topTable(ebayes_limma_lane, coef=2:7,
+                    number=dim(edata)[1],sort.by="none")
+head(top_lane)
+```
+
+This is again the moderated version of the F-statistic we saw earlier
+
+
+```{r}
+plot(top_lane$F,fstats_obj$statistic,
+     xlab="Moderated F-statistic",ylab="F-statistic",col=3)
+```
+
+
+## Calculating a nested comparison with edge
+
+We can also perform the unmoderated nested comparisons in the `edge` package, which also has functions for calculating a more powerful [odp statistic](http://genomine.org/papers/SDL_Biostat_2007.pdf)
+
+```{r}
+edge_study = build_study(edata, grp = as.factor(pdata$lane.number))
+de_obj = lrt(edge_study)
+qval = qvalueObj(de_obj)
+plot(qval$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
+```
+
+We can easily adjust for variables by passing arguments to the `adj.var` variable.
+
+```{r}
+edge_study2 = build_study(edata, grp = as.factor(pdata$lane.number),
+                        adj.var=pdata$strain)
+de_obj2 = lrt(edge_study2)
+qval2 = qvalueObj(de_obj2)
+plot(qval2$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
+```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.
+
+
