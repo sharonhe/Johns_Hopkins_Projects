@@ -1,0 +1,72 @@
+---
+title: "Genomic_Features"
+author: "Sharonhe"
+date: "November 5, 2016"
+output: html_document
+---
+
+This project is to exam genomic features, and compute which genes, transcripts or exons are covered in a selected genomic region. 
+
+# Dependencies
+
+```{r}
+library(TxDb.Hsapiens.UCSC.hg19.knownGene) # or other annotation package
+library(BSgenome)
+library(GenomicRanges)
+```
+
+# Exam genomic features
+
+```{r}
+txdb = TxDb.Hsapiens.UCSC.hg19.knownGene
+txdb
+genes(txdb)
+```
+
+# Select a small range on chr1
+
+```{r}
+gr = GRanges(seqnames = "chr1", strand = "+", ranges = IRanges(start = 11874, end = 14409))
+```
+
+# Check which genes are covered in the above selected region
+
+```{r}
+subsetByOverlaps(genes(txdb), gr)
+```
+
+# Check which transcripts are covered in the above selected region
+
+```{r}
+subsetByOverlaps(transcripts(txdb), gr)
+```
+
+# Check which exons are covered in the above selected region
+
+```{r}
+subsetByOverlaps(exons(txdb), gr)
+```
+
+# Check how the exons are combined together to form transcripts?
+
+```{r}
+subsetByOverlaps(exonsBy(txdb, by = "tx"), gr)
+```
+
+# Check which coding sequences are covered in the above selected region
+
+```{r}
+subsetByOverlaps(cdsBy(txdb, by = "tx"), gr)
+```
+
+# Check transcript length on a specific gene
+
+```{r}
+subset(transcriptLengths(txdb, with.cds_len = TRUE), gene_id == "100287102")
+```
+
+sessioninfo()
+
+
+
+

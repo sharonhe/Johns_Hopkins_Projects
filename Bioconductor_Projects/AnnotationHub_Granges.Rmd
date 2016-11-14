@@ -1,0 +1,307 @@
+---
+title: "AnnotationHub and GRanges Usecase"
+author: "Sharonhe"
+date: "November 2, 2016"
+output: html_document
+---
+
+--
+Dependencies
+--
+
+```{r}
+library(GenomicRanges)
+library(rtracklayer)
+library(AnnotationHub)
+```
+
+---
+Project 1: H3K4 trimethylation in gene promoters.
+---
+
+--
+Strategy
+--
+
+1. Getting the ENCODE histone data using AnnotationHub.
+2. Getting promoters using AnnotationHub.
+3. Comparing the histone data and promoters using findOverlaps in GenomicRanges.
+
+--
+Getting the ENCODE histone data using AnnotationHub
+--
+
+```{r}
+ah <- AnnotationHub()
+ah <- subset(ah, species == "Homo sapiens")
+qhs <- query(ah, "H3K4me3")
+qhs <- query(qhs, "Gm12878")
+qhs
+
+```
+
+Let's take a close look at the data
+
+```{r}
+qhs$title
+qhs$dataprovider
+```
+
+Retrieve the ENCODE narrowpeak data
+
+```[r]
+gr1 <- subset(qhs, title == "wgEncodeUwHistoneGm12878H3k4me3StdPkRep1.narrowPeak.gz")[[1]]
+gr1
+```
+Retrieve the Broad narrowpeak data
+
+```{r}
+gr2 <- subset(qhs, title == "E116-H3K4me3.narrowPeak.gz")[[1]]
+gr2
+```
+
+Look at the distribution of peak widths:
+
+```{r}
+summary(width(gr1))
+table(width(gr1))
+summary(width(gr2))
+table(width(gr2))
+```
+
+In this project, we will stick with gr1 (from ENCODE).
+
+--
+Getting promoters using AnnotationHub
+--
+
+Next we need to get some promoter coordinates. RefSeq is a highly curated collection of genes.
+
+```{r}
+qhs <- query(ah, "RefSeq")
+qhs
+qhs$genome
+```
+
+This looks like the same resources, but in different genome builds.
+
+so we know which one to get:
+
+```{r}
+refseq <- qhs[qhs$genome == "hg19" & qhs$title == "RefSeq Genes"]
+refseq
+refseq <- refseq[[1]] ## Download the referene genome
+refseq
+```
+
+```{r}
+table(table(refseq$name)) ## look at the number of isoforms per gene name
+```
+
+Getting the promoters in Refseq
+
+```{r}
+promoters <- promoters(refseq)
+table(width(promoters)) ## The default in this function is to use 2kb upstream and 200bp downstream of the start site.
+```
+
+--
+Comparing the histone data and promoters using findOverlaps in GenomicRanges.
+--
+
+```{r}
+ov <- findOverlaps(promoters, gr1)
+ov
+```
+
+Compute how many percent of the peaks are in a promoter:
+
+```{r}
+length(unique(queryHits(ov))) / length(gr1)
+```
+
+Compute how many percent of promoters have a peak in them:
+
+```{r}
+length(unique(subjectHits(ov))) / length(promoters)
+```
+
+Compute a small 2x2 matrix for which bases are in promoters and/or peaks:
+
+```{r}
+prom <- reduce(promoters, ignore.strand = TRUE)
+peaks <- reduce(gr1)
+both <- intersect(prom, peaks)
+only.prom <- setdiff(prom, both)
+only.peaks <- setdiff(peaks, both)
+overlapMat <- matrix(0,, ncol = 2, nrow = 2)
+colnames(overlapMat) <- c("in.peaks", "out.peaks")
+rownames(overlapMat) <- c("in.promoters", "out.promoter")
+overlapMat[1,1] <- sum(width(both))
+overlapMat[1,2] <- sum(width(only.prom))
+overlapMat[2,1] <- sum(width(only.peaks))
+overlapMat[2,2] <- 3*10^9 - sum(overlapMat)
+round(overlapMat / 10^6, 2)
+```
+
+Compute an odds-ratio for the 2x2 table:
+
+```{r}
+oddsRatio <- overlapMat[1,1] * overlapMat[2,2] / (overlapMat[2,1] * overlapMat[1,2])
+oddsRatio
+```
+
+The result shows that this odds ratio is bigger than 1, which means that it shows an enrichment of peaks in promoters.
+
+---
+Project 2: CpG islands in Human genome
+---
+
+# Use the AnnotationHub package to obtain data on "CpG Islands" in the human genome.
+
+```{r}
+ah <- AnnotationHub()
+ah <- subset(ah, species == "Homo sapiens")
+qhs <- query(ah, "CpG")
+qhs$title
+qhs$dataprovider
+qhs$genome
+ah_human_CpG_data <- qhs[["AH5086"]]
+```
+
+# summary info about CpG island dataset
+
+```{r}
+summary(width(ah_human_CpG_data))
+seqinfo(ah_human_CpG_data)
+seqlevels(ah_human_CpG_data)
+gaps(ah_human_CpG_data)
+```
+
+# reduce data
+```{r}
+ah_human_CpG_reduce <- reduce(ah_human_CpG_data)
+ah_human_CpG_reduce
+```
+
+# Calculate the islands exists on the autosomes
+
+```{r}
+autosome <- c(paste("chr", 1:22, sep=""))
+split_data_by_chr <- split(ah_human_CpG_reduce, seqnames(ah_human_CpG_reduce))
+autosome_CpG_data <- split_data_by_chr[autosome]
+seqlevels(autosome_CpG_data)
+
+# CpG Islands on autosome
+unlist(autosome_CpG_data)
+
+# CpG Islands on chr4
+autosome_CpG_data[4]
+```
+
+---
+Project 3: H3K4me3 histone modification for the H1 cell line
+---
+
+# Obtain the data for the H3K4me3 histone modification for the H1 cell line from Epigenomics Roadmap, using AnnotationHub.
+
+```{r}
+# To find out the EID for H1 cells in Epigenomics Roadmap project
+metadata.tab <- query(ah , c("EpigenomeRoadMap", "Metadata"))
+metadata.tab
+metadata.tab <- ah[["AH41830"]]
+metadata.tab[1:6, 1:5]
+# So E003 is the EID for H1 cell line
+```
+
+```{r}
+ah_H3K4me <- query(ah, c("H3K4me3", "E003"))
+ah_H3K4me_data <- ah_H3K4me[["AH29884"]]
+seqinfo(ah_H3K4me_data)
+seqlevels(ah_H3K4me_data)
+```
+
+# Subset autosome data
+
+```{r}
+autosome <- c(paste("chr", 1:22, sep=""))
+ah_H3K4me_autosome_data <- subset(ah_H3K4me_data, seqnames %in% autosome)
+```
+
+# count base pairs these regions cover
+
+```{r}
+sum(width(unlist(ah_H3K4me_autosome_data)))
+```
+
+---
+Project 4: H3K27me3 histone modification for the H1 cell line
+---
+
+# Obtain the data for the H3K27me3 histone modification for the H1 cell line from Epigenomics Roadmap, using the AnnotationHub package. 
+
+```{r}
+ah_H3K27me3 <- query(ah, c("H3K27me3", "narrowPeak", "E003")) # keywords are based on the investigation in project 3
+ah_H3K27me3
+# retrieve data
+ah_H3K27me3_data <- ah_H3K27me3[["AH29892"]]
+# get data information
+summary(width(ah_H3K27me3_data))
+seqlevels(ah_H3K27me3_data)
+seqinfo(ah_H3K27me3_data)
+```
+
+# Subset these regions to only keep regions mapped to the autosomes. 
+
+```{r}
+autosome <- c(paste("chr", 1:22, sep=""))
+ah_H3K27me3_autosome_data <- subset(ah_H3K27me3_data, seqnames %in% autosome)
+```
+
+# calculate mean signalValue
+
+```{r}
+ah_H3K27me3_autosome_data_mean <- mean(ah_H3K27me3_autosome_data$signalValue)
+ah_H3K27me3_autosome_data_mean
+```
+
+---
+Project 5: Overlaps of bivalent regions with CpG islands
+---
+
+Bivalent regions are bound by both H3K4me3 and H3K27me3. 
+
+# According to project 3 and 4, calculate the bases on the standard chromosomes that are bivalently marked. 
+
+```{r}
+bivalent_data <- intersect(unlist(ah_H3K4me_autosome_data), unlist(ah_H3K27me3_autosome_data))
+sum(width(reduce(bivalent_data)))
+```
+
+# Calculate the fraction of the bivalent regions, overlap one or more CpG Islands.
+
+```{r}
+CpG_bivalent_data <- findOverlaps(bivalent_data, unlist(autosome_CpG_data))
+fraction_bi <- length(unique(queryHits(CpG_bivalent_data)))/length(bivalent_data)
+fraction_bi
+```
+
+# Calculate the fraction of the bases which are part of CpG Islands, are also bivalent marked. 
+
+```{r}
+ov_CpG_bivalent <- intersect(bivalent_data, unlist(autosome_CpG_data))
+fraction_CpG <- sum(width(reduce(ov_CpG_bivalent)))/sum(width(unlist(autosome_CpG_data)))
+fraction_CpG
+```
+
+# Calculate bases that are bivalently marked within 10kb of CpG Islands?
+
+```{r}
+autosome_CpG_data
+CpG_10k <- resize(unlist(autosome_CpG_data), width = 20000 + width(unlist(autosome_CpG_data)), fix = "center")
+CpG_10k_bivalent <- intersect(CpG_10k, bivalent_data)
+sum(width(CpG_10k_bivalent))
+```
+
+
+
