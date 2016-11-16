@@ -50,3 +50,12 @@ qval = qvalueObj(de_obj)
 hist(qval$pvalues,col=3)
 ```
 
+## P-values for moderated statistics with limma
+
+```{r}
+mod = model.matrix(~ pdata$strain + pdata$lane.number)
+fit_limma = lmFit(edata,mod)
+ebayes_limma = eBayes(fit_limma)
+limma_pvals = topTable(ebayes_limma,number=dim(edata)[1])$P.Value
+hist(limma_pvals,col=4)
+```
