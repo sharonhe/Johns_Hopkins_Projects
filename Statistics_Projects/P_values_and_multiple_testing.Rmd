@@ -59,3 +59,23 @@ ebayes_limma = eBayes(fit_limma)
 limma_pvals = topTable(ebayes_limma,number=dim(edata)[1])$P.Value
 hist(limma_pvals,col=4)
 ```
+
+## Calculating empirical permutation p-values with edge
+
+Often when you permute you are trying to calculate an empirical p-value. To do this we can compare each observed statistic to the permuted statistics. You can either compare within a single gene (argument `pooled=FALSE` in the `empPvals` function) or pooling the permuted statistics across multiple genes (argument `pooled=TRUE` in the `empPvals` function, the default). 
+
+```{r}
+set.seed(3333)
+B = 1000
+tstats_obj = rowttests(edata,pdata$strain)
+tstat0 = matrix(NA,nrow=dim(edata)[1],ncol=B)
+tstat = tstats_obj$statistic
+strain = pdata$strain
+for(i in 1:B){
+  strain0 = sample(strain)
+  tstat0[,i] = rowttests(edata,strain0)$statistic
+}
+
+emp_pvals = empPvals(tstat,tstat0)
+hist(emp_pvals,col=2)
+```
