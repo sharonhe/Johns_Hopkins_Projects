@@ -79,3 +79,19 @@ for(i in 1:B){
 emp_pvals = empPvals(tstat,tstat0)
 hist(emp_pvals,col=2)
 ```
+
+## Multiple testing
+
+### Bonferroni and Benjamini-Hochberg FDR correction with p.adjust
+
+You can use the `p.adjust` function to get "multiple testing corrected" p-values which you can then use to control error rates. 
+
+```{r}
+fp_bonf = p.adjust(fstats_obj$p.value,method="bonferroni")
+hist(fp_bonf,col=3)
+quantile(fp_bonf)
+
+fp_bh = p.adjust(fstats_obj$p.value,method="BH")
+hist(fp_bh,col=3)
+quantile(fp_bh)
+```
