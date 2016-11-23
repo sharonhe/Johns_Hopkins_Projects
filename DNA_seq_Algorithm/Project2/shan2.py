@@ -40,3 +40,11 @@ occurances, numberOfOccurs, numberOfhits = patterns.matchedIndex(index, \
                                                k_mer, pattern, isSubseqIndex = vial)
 
 print "Q6: Within 2 mismatchs, the hits are %d\n" %numberOfhits
+
+# Q4-2:
+from genomicAlignmentV1 import findPattern
+filename3 = "chr1.GRCh38.excerpt.fasta"
+pattern = "GGCGCGGTGGCTCACGCCTGTAAT"
+patterns = findPattern(pattern,filename3)
+print "Q4-2: The 'GGCGCGGTGGCTCACGCCTGTAAT' occurs %d times with mismatch less than 2 \n" \
+           %len(patterns.patternIdentifier(2))
