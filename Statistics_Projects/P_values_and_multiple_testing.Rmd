@@ -103,3 +103,11 @@ limma_pvals_adj = topTable(ebayes_limma,number=dim(edata)[1])$adj.P.Val
 hist(limma_pvals_adj,col=2)
 quantile(limma_pvals_adj)
 ```
+
+### Direct q-values
+
+```{r}
+qval_limma = qvalue(limma_pvals)
+summary(qval_limma)
+qval$pi0
+```
