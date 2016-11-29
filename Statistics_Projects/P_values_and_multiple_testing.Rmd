@@ -111,3 +111,10 @@ qval_limma = qvalue(limma_pvals)
 summary(qval_limma)
 qval$pi0
 ```
+
+### q-values using edge
+
+```{r}
+qval = qvalueObj(de_obj)
+summary(qval)
+```
