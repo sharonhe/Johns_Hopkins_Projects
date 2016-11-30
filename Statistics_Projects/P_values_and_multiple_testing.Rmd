@@ -118,3 +118,11 @@ qval$pi0
 qval = qvalueObj(de_obj)
 summary(qval)
 ```
+
+## Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+This document was processed on: `r Sys.Date()`.
