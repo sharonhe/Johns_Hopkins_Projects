@@ -6,3 +6,11 @@ output: html_document
 ---
 
 ## Dependencies
+
+```{r}
+library(devtools)
+library(Biobase)
+library(goseq)
+library(DESeq2)
+```
+ 
