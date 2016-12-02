@@ -14,3 +14,6 @@ library(goseq)
 library(DESeq2)
 ```
  
+## goseq tutorial
+
+http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq.pdf
