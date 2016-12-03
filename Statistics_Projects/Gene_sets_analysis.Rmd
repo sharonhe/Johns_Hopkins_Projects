@@ -17,3 +17,10 @@ library(DESeq2)
 ## goseq tutorial
 
 http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq.pdf
+
+## Check what genomes are supported by this package
+
+```{r}
+head(supportedGenomes())
+head(supportedGeneIDs())
+```
