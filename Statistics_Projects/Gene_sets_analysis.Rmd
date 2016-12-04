@@ -24,3 +24,18 @@ http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq
 head(supportedGenomes())
 head(supportedGeneIDs())
 ```
+
+## Load the data
+
+This is the example data from the `goseq` package.
+```{r}
+temp_data =read.table(system.file("extdata","Li_sum.txt",
+                                     package="goseq"),sep="\t",
+                                     header=TRUE,
+                                     stringsAsFactors=FALSE)
+expr= temp_data[,-1]
+rownames(expr) = temp_data[,1]
+expr = expr[rowMeans(expr) > 5,]
+grp=factor(rep(c("Control","Treated"),times=c(4,3)))
+pdata  = data.frame(grp)
+```
