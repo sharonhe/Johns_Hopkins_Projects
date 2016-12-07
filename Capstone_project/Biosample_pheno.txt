@@ -1,0 +1,7 @@
+sample	sra	age	group	sex	disease	race	RIN	fraction
+R3452	SRS686965	-0.3836	fetus	female	control	AA	9.6	total
+R4706	SRS686994	-0.4986	fetus	male	control	HISP	8.3	total
+R4707	SRS686995	-0.4027	feuts	male	control	AA	8.6	total
+R2857	SRS686962	40.42	adult	male	control	AA	8.4	total
+R3098	SRS686964	44.17	adult	female	control	AA	5.3	total
+R3467	SRS686967	36.5	adult	female	control	AA	9.0	total
