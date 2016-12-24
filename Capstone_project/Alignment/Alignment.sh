@@ -17,3 +17,7 @@ echo "Fe_R4706 aligned"
 
 tophat2 -p 10 -o Fe_R4707_tophat -G /Volumes/EvaBook/Reference_Genome/hg19_refFlat.gtf --transcriptome-index /Volumes/EvaBook/Reference_Genome/hg19_refFlat/hg19_refFlat /Volumes/EvaBook/Reference_Genome/hg19_bowtieindexed/hg19 Fe_R4707_1.fastq Fe_R4707_2.fastq
 echo "Fe_R4707 aligned"
+
+
+# backing up
+cp -Rfv /Volumes/EvaBook/merged_FASTQs /Volumes/ShanBook/Capstone_project/Alignment
