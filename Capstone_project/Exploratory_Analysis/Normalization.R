@@ -13,5 +13,5 @@ rawCount[,5] = rawCount[,5]/R3452_PMRM
 rawCount[,6] = rawCount[,6]/R4706_PMRM
 rawCount[,7] = rawCount[,7]/R4707_PMRM
 
-write.table(rawCount, file = "FeatureCounts_PMRM.txt", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(rawCount, file = "Expression.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
