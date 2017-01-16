@@ -91,17 +91,68 @@ anno_liver_df <- as.data.frame(unname(anno_liver))
 selectedRows_all_3 <- which(anno_liver_df$gene.name %in% gene_exp_final$Genes)
 all_anno_liver_df <- anno_liver_df[selectedRows_all_3,]
 
+# Venn diagram without filtering the data
+# ol_f_a_l <- findOverlapsOfPeaks(fetal_brain, adult_brain, liver)
+# makeVennDiagram(ol_f_a_l)
+
+all_anno_adult_brain_df <- (all_anno_adult_brain_df[,c(1:12,20)])
+all_anno_fetal_brain_df <- (all_anno_fetal_brain_df[,c(1:12,20)])
+all_anno_liver_df <- (all_anno_liver_df[,c(1:12,20)])
+
+library(dplyr)
+all_anno_adult_brain_df <- all_anno_adult_brain_df %>% distinct(name, .keep_all = TRUE)
+all_anno_fetal_brain_df <- all_anno_fetal_brain_df %>% distinct(name, .keep_all = TRUE)
+all_anno_liver_df <- all_anno_liver_df %>% distinct(name, .keep_all = TRUE)
+
+all_anno_adult_brain <- toGRanges(all_anno_adult_brain_df, colNames = NULL)
+all_anno_fetal_brain <- toGRanges(all_anno_fetal_brain_df, colNames = NULL)
+all_anno_liver <- toGRanges(all_anno_liver_df, colNames = NULL)
+ol_fetal_adult_liver <- findOverlapsOfPeaks(all_anno_adult_brain, all_anno_fetal_brain, all_anno_liver, connectedPeaks="keepAll")
+
+# Venn diagram after filtering the data
+makeVennDiagram(ol_fetal_adult_liver)
+
+# Venn diagram for genes upregulated in fetal brain
+up_anno_adult_brain_df <- (up_anno_adult_brain_df[,c(1:12,20)])
+up_anno_fetal_brain_df <- (up_anno_fetal_brain_df[,c(1:12,20)])
+
+up_anno_adult_brain_df <- up_anno_adult_brain_df %>% distinct(name, .keep_all = TRUE)
+up_anno_fetal_brain_df <- up_anno_fetal_brain_df %>% distinct(name, .keep_all = TRUE)
+
+up_anno_adult_brain <- toGRanges(up_anno_adult_brain_df, colNames = NULL)
+up_anno_fetal_brain <- toGRanges(up_anno_fetal_brain_df, colNames = NULL)
+
+ol_up_fetal_adult <- findOverlapsOfPeaks(up_anno_adult_brain, up_anno_fetal_brain, connectedPeaks="keepAll")
+
+makeVennDiagram(ol_up_fetal_adult)
+
+# Descriptive Statistics of Peak Distances
+
+summary(width(up_anno_adult_brain))
+summary(width(up_anno_fetal_brain ))
+
+t.test(up_anno_adult_brain_df$width,up_anno_fetal_brain_df$width, var.equal=TRUE, paired=FALSE)
+# Results are as following:
+# t = -28.923, df = 5742, p-value < 2.2e-16
+# alternative hypothesis: true difference in means is not equal to 0
+# 95 percent confidence interval:
+#         -1070.6484  -934.7274
+# sample estimates:
+#         mean of x mean of y 
+# 1280.645  2283.333 
+
+
+# make boxplot of peak width
+# for all differentially expressed genes
 
 
 
-# Obtain enriched GO terms 
-# over <- getEnrichedGO(anno_fetal_brain, orgAnn="org.Hs.eg.db", 
-#                     feature_id_type = "entrez_id",
-#                     maxP=.05, minGOterm=10, 
-#                     multiAdjMethod="BH", condense=TRUE)
-# head(over[["bp"]][, -c(3, 10)])
+# for genes up-regulated in fetus
+boxplot(up_anno_adult_brain_df[,4], at = 1, col = 2, names = "Adult", main = "Peak Width", ylab = "Peak width", xlim = c(0,3))
+boxplot(up_anno_fetal_brain_df[,4], at = 2, col =3, names = "Fetal", add = TRUE)
+legend("topright", c("Adult", "Fetal"), fill = c(2, 3), col = c(2, 3))
 
-
+# for genes down-regulated in fetus
 
 
 write.csv(as.data.frame(unname(anno_fetal_brain)), "anno_fetal_brain.csv")
